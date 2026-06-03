@@ -26,7 +26,7 @@ def get_next_id(sheet):
 
 def get_timestamp():
     uk_time = datetime.now(pytz.timezone("Europe/London"))
-    return datetime.now().strftime("%d/%m/%Y %H:%M")
+    return uk_time.strftime("%d/%m/%Y %H:%M")
 
 def add_transaction(sheet, type, category, amount, description):
     next_id = get_next_id(sheet)
