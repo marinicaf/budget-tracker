@@ -1,49 +1,42 @@
 import streamlit as st
-import csv
-import os
 from datetime import datetime
+import gspread
+from google.oauth2.service_account import Credentials
 
-FILENAME = "transactions.csv"
+SCOPES = ["https://www.googleapis.com/auth/spreadsheets",
+          "https://www.googleapis.com/auth/drive"]
 
-def setup_file():
-    if not os.path.exists(FILENAME):
-        with open(FILENAME,"w", newline="") as f:
-            writer = csv.writer(f)
-            writer.writerow(["id", "time_added", "type", "category", "amount", "description"])
+def get_sheet():
+    creds = Credentials.from_service_account_file("credentials.json", scopes=SCOPES)
+    client = gspread.authorize(creds)
+    return client.open("budget-tracker-data").sheet1
 
-def get_next_id():
-    with open(FILENAME, "r") as f:
-        rows = list(csv.reader(f))
-        return len(rows)
+def get_next_id(sheet):
+    return len(sheet.get_all_values())
 
 def get_timestamp():
     return datetime.now().strftime("%d/%m/%Y %H:%M")
 
-def add_transaction(type, category, amount, description):
-    next_id = get_next_id()
+def add_transaction(sheet, type, category, amount, description):
+    next_id = get_next_id(sheet)
     time_added = get_timestamp()
-    with open(FILENAME, "a", newline = "") as f:
-        writer = csv.writer(f)
-        writer.writerow([next_id, time_added, type, category, amount, description])
+    sheet.append_row([next_id, time_added, type, category, amount, description])
 
-def load_transactions():
-    with open(FILENAME, "r") as f:
-        reader = csv.reader(f)
-        headers = next(reader)
-        rows = list(reader)
-        return headers, rows
+def load_transactions(sheet):
+    data = sheet.get_all_values()
+    headers = data[0]
+    rows = data[1:]
+    return headers, rows
 
-def get_column_index(headers, name):
-    return headers.index(name)
-
-setup_file()
+sheet = get_sheet()
+headers, rows = load_transactions(sheet)
 
 # Sidebar
 st.sidebar.title("Menu")
 page = st.sidebar.radio("Go to", ["Home", "Add Transaction", "View Transactions"])
 
 # Load data
-headers, rows = load_transactions()
+headers, rows = load_transactions(sheet)
 
 if page == "Home":
     st.title("Budget Tracker")
@@ -52,8 +45,8 @@ if page == "Home":
     # Summary
     st.subheader("Summary")
 
-    type_idx = get_column_index(headers, "type")
-    amount_idx = get_column_index(headers, "amount")
+    type_idx = headers.index("type")
+    amount_idx = headers.index("amount")
 
     total_income = sum(float(r[amount_idx]) for r in rows if r[type_idx] == "income")
     total_expense = sum(float(r[amount_idx]) for r in rows if r[type_idx] == "expense")
@@ -75,7 +68,7 @@ elif page == "Add Transaction":
 
     if st.button("Add"):
         if category and description:
-            add_transaction(type, category, amount, description)
+            add_transaction(sheet, type, category, amount, description)
             st.success(f"Added: {type} of £{amount:.2f} ({category}) - {description}")
         else:
             st.error("Please fill in category and description")
