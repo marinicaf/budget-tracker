@@ -7,7 +7,16 @@ SCOPES = ["https://www.googleapis.com/auth/spreadsheets",
           "https://www.googleapis.com/auth/drive"]
 
 def get_sheet():
-    creds = Credentials.from_service_account_file("credentials.json", scopes=SCOPES)
+    ## read from google directly for offline check
+    #creds = Credentials.from_service_account_file("credentials.json", scopes=SCOPES)
+    #client = gspread.authorize(creds)
+    #return client.open("budget-tracker-data").sheet1
+
+    ## read from streamlit secrets
+    creds = Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"],
+        scopes=SCOPES
+    )
     client = gspread.authorize(creds)
     return client.open("budget-tracker-data").sheet1
 
