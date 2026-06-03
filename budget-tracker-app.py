@@ -1,5 +1,6 @@
 import streamlit as st
 from datetime import datetime
+import pytz
 import gspread
 from google.oauth2.service_account import Credentials
 
@@ -24,6 +25,7 @@ def get_next_id(sheet):
     return len(sheet.get_all_values())
 
 def get_timestamp():
+    uk_time = datetime.now(pytz.timezone("Europe/London"))
     return datetime.now().strftime("%d/%m/%Y %H:%M")
 
 def add_transaction(sheet, type, category, amount, description):
